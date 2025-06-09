@@ -1,2 +1,2 @@
-canonical_charged_smiles,parent_charge_site,h_site_one,h_site_two,h_site_three,charged_xyz_index
-C#CCCC[NH2+]C,5,14,15,NA,TestMolecule
+canonical_charged_smiles,name
+C#CCCC[NH2+]C,TestMolecule
