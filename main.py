@@ -52,8 +52,8 @@ def structure_two_generator(
         A matrix that rotates around the Z-axis.
     structure_one : ArrayLike
         The first structure generated from `structure_one_generator()`.
-    distance_multiplier : float, default=2.7
-        The distance between the parent charge sites in Angstroms.
+    distance_multiplier : float, default=2.7 Å
+        The distance between the parent charge sites Å.
 
     Returns
     -------
@@ -142,7 +142,7 @@ def structure_checker(
     -------
     bool
         True indicates that the structures have some overlap 
-        (atoms within 1.5 Angstroms of each other).
+        (atoms within 1.5 Å of each other).
         False indicates there is no detected overlap.
     """
 
@@ -182,8 +182,8 @@ def final_structure_generator(
         The current Molecule object.
     attempt_number : {0, 1, 2}
         The attempt number.
-    distance_multiplier : float, default=2.7
-        The distance between the parent charge sites in Angstroms.
+    distance_multiplier : float, default=2.7 Å
+        The distance between the parent charge sites Å.
 
     Returns
     -------
@@ -236,8 +236,8 @@ def overlap_handler(
         The current Molecule object.
     z_rotation_offset : NDArray
         A matrix that rotates around the Z-axis.
-    distance_multiplier : float, (default=2.7)
-        The distance between the parent charge sites in Angstroms.
+    distance_multiplier : float, (default=2.7 Å)
+        The distance between the parent charge sites Å.
 
     Returns
     -------
@@ -505,13 +505,14 @@ class Data:
             Path to the folder that the XYZ file(s) should be written to.
             Default `None` prompts user to select a folder.
         xyz_data_dir : PathLike | None, default=None
-            Path to a folder containing pre-existing structures that will be used in generating the NEB structures.
+            Path to a folder containing pre-existing structures that will be used in generating 
+            the NEB structures. 
             Default `None` generates structures based off of the SMILES strings.
         disable_nudge : bool, default=False
             Disables the part of the structure build that applies a slight 
             nudge to the structure to avoid local minima in geometry optimizations
         distance_multiplier : float, default=2.7
-            The distance between the protonated atoms in the final NEB structure (in Angstroms).
+            The distance between the protonated atoms in the final NEB structure (Å).
 
         Notes
         -----
@@ -522,8 +523,8 @@ class Data:
         Sometimes this can cause structure overlap when no nudge would provide a clean structure, but generally has no problems.
 
         The parameter `distance_multiplier` is a set distance between the 2 protonated atoms BEFORE the nudge is applied.
-        The default of 2.7 Angstroms is consistent with a large amount of optimized reactant and product geometries, however
-        some systems may require a longer bond. It is not recommended to go below 2.5 Angstroms, as this can often cause atoms to
+        The default of 2.7 Å is consistent with a large amount of optimized reactant and product geometries, however
+        some systems may require a longer bond. It is not recommended to go below 2.5 Å, as this can often cause atoms to
         overlap during structure building and make it harder for the overlap handler to fix the issue.
         """
 
@@ -531,10 +532,17 @@ class Data:
             xyz_save_dir = open_folder(title="Select a directory to save XYZ Files")
 
         if xyz_data_dir is not None:
-            structure = Geometry.from_xyz(
-                xyz_data_dir/Path(f"{self.names[index]}.xyz"),
-                charge=Molecule.calculate_charge(self.smiles_strings[index])
-            )
+            try:
+                structure = Geometry.from_xyz(
+                    xyz_data_dir/Path(f"{self.names[index]}.xyz"),
+                    charge=Molecule.calculate_charge(self.smiles_strings[index])
+                )
+            except FileNotFoundError:
+                structure = Geometry.from_xyz(
+                    xyz_data_dir/Path(f"{self.names[index]}-C.xyz"),
+                    charge=Molecule.calculate_charge(self.smiles_strings[index])
+                )
+
         else:
             structure = Geometry.from_smiles(self.smiles_strings[index])
 
@@ -549,7 +557,7 @@ class Data:
             self.names[index],
         )
 
-        print(f"Working on {mol.molecule_name}...")
+        print(f"Working on {mol.name}...")
 
         z_rotation_offset = IDENTITY_MATRIX
 
@@ -599,11 +607,11 @@ class Data:
         )
 
         final_structure.to_xyz(
-            name=f"{mol.molecule_name}-{stage[0]}",
+            name=f"{mol.name}-{stage[0]}",
             xyz_dir=xyz_save_dir
         )
 
-        print(f"Molecule {mol.molecule_name} complete!\n")
+        print(f"Molecule {mol.name} complete!\n")
 
 
     def build_single(self, index: int, xyz_save_dir: PathLike | None = None):
@@ -703,8 +711,8 @@ class Data:
             for row in data:
                 multiple_molecule_data.append(row)
 
-        smiles_strings = [i[0] for i in multiple_molecule_data]
-        names = [i[1] for i in multiple_molecule_data]
+        smiles_strings = [i[0] for i in multiple_molecule_data[1:]]
+        names = [i[1] for i in multiple_molecule_data[1:]]
 
         return Data(smiles_strings, names)
     
@@ -716,16 +724,20 @@ def main(
     name: list[str] | str | None = None,
 ):
 
-    xyz_save_dir = input("Select a directory to save XYZ files (or hit <ENTER> to use a file browser): ")
+    print(build_type, use_default)
 
     if smiles is not None and name is not None:
         data = Data(smiles_strings=smiles, names=name)
     elif smiles is None and name is None:
-        data = Data()
+        data = Data.multiple_input()
     elif (smiles is None) ^ (name is None):
-        raise ValueError("Please include both a list of SMILES and a list of names!")
+        raise ValueError("Please include BOTH a list of SMILES and a list of names!")
     elif len(smiles) != len(name):
         raise ValueError("The list of SMILES strings must be the same as the list of names!")
+
+    xyz_save_dir = input("Select a directory to save XYZ files (or hit <ENTER> to use a file browser): ")
+    if xyz_save_dir == "":
+        xyz_save_dir = open_folder(title="Select a directory to save XYZ files.")
 
     if build_type == "neb":
 
@@ -747,7 +759,7 @@ def main(
 
         if not use_default:
             disable_nudge = bool(input("Disable nudge (True or False, default=False): "))
-            distance_multiplier = float(input("Set distance multiplier (default=2.7): "))
+            distance_multiplier = float(input("Set distance multiplier (default=2.7 Å): "))
         else:
             disable_nudge = False
             distance_multiplier = 2.7
@@ -782,12 +794,12 @@ def main(
             )
 
 
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description=(
-            "To start, enter either a list of SMILES strings and names "
+        description="Program for generating proton transfer NEB structures",
+        usage=(
+            "\nTo start, enter either a list of SMILES strings and names "
             "or enter nothing to open a file browser and select a CSV with "
             "SMILES and names already specified.\n"
             "The format for a CSV with pre-existing SMILES and names should be\n"
@@ -796,13 +808,40 @@ if __name__ == "__main__":
             "'smiles2, name2'\n"
             "And so on for all molecules.\n\n"
             "Then, select a build type ('neb', 'single'), and optionally toggle defaults off if desired.\n"
-            "The default values are for the distance between protonated atoms in NEB calculations (2.7 Angstrom) "
+            "The default values are for the distance between protonated atoms in NEB calculations (2.7 Å) "
             "and for whether or not to apply a deviation to the NEB structures in order to avoid a local minima during "
             "geometry optimizations.\n\n"
             "Follow the prompts to either build all molecules in the list or build only one, "
             "and enter any information as requested."
-        )
+        ),
     )
 
-    parser.add_argument('Build Type ("neb", "single"): ', help='Type of structure generation to run.')
-    parser.add_argument()
+    parser.add_argument("type", help="Type of structure generation to run ('neb', 'single')")
+    parser.add_argument(
+        "-d",
+        "--default",
+        help="Use default values for NEB structure generation, True or False. (see --help)",
+        default=True,
+    )
+
+    parser.add_argument(
+        "-s",
+        "--smiles",
+        help="SMILES string to use in molecule builder.",
+        default=None
+    )
+    parser.add_argument(
+        "-n",
+        "--name",
+        help="Name of molecule for corresponding SMILES string.",
+        default=None
+    )
+
+    args = parser.parse_args()
+    use_default = False if args.default == "False" else True
+
+    smiles = [args.smiles] if args.smiles is not None else None
+    name = [args.name] if args.name is not None else None
+
+    print(use_default)
+    main(build_type=args.type, use_default=use_default, smiles=smiles, name=name)

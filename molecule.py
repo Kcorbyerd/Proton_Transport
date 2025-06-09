@@ -15,7 +15,7 @@ class Atom:
     element : str
         The atomic symbol of the element.
     xyz : NDArray
-        The x-, y-, and z-coordinates of the atom.
+        The x-, y-, and z-coordinates of the atom (in Angstroms, Å).
     """
 
     def __init__(
@@ -88,7 +88,7 @@ class Geometry:
 
     @classmethod
     def from_xyz(cls, file_path: str, charge: int = 0):
-        """Read in XYZ file format and return atomic symbols and coordinates
+        """Read in XYZ file format and return atomic symbols and coordinates (Å)
 
         Parameters
         ----------
@@ -203,7 +203,7 @@ class Molecule:
         Any valid SMILES string.
     structure : Geometry
         The structure of the molecule
-    molecule_name : str, optional
+    name : str, optional
         The molecule name that will be used for naming output XYZ and INP files.
     protonated_atom_index : int, optional
         The line index of the atom that carries an extra proton (the parent charge site).
@@ -211,8 +211,6 @@ class Molecule:
         The line index of an atom attached to the parent charge site.
     proton_position_indices : list of int, optional
         A list of the line indexes for each proton attached to the protonated atom.
-    charge : int, default=1
-        The charge of the molecule.
 
     Methods
     -------
@@ -228,7 +226,7 @@ class Molecule:
         self,
         smiles_string: str,
         structure: Geometry = None,
-        molecule_name: str = None,
+        name: str = None,
         protonated_atom_index: int = None,
         neighboring_atom_index: int = None,
         proton_position_indices: list[int] = None,
@@ -240,7 +238,7 @@ class Molecule:
         else:
             self.structure = Geometry.from_smiles(self.smiles_string)
 
-        self.molecule_name = molecule_name if molecule_name is not None else "bean"
+        self.name = name if name is not None else "bean"
 
         if protonated_atom_index is not None or self.structure.charge == 0:
             self.protonated_atom_index = protonated_atom_index
